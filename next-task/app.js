@@ -7,10 +7,11 @@ const app = express();
 const systemLogin = '1167133';
 
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 app.use((request, response, next) => {
   response.set('Access-Control-Allow-Origin', '*');
   response.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  response.set('Access-Control-Allow-Headers', 'Content-Type');
+  response.set('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin, X-Requested-With');
 
   if (request.method === 'OPTIONS') {
     response.sendStatus(204);
@@ -49,11 +50,13 @@ app.get(['/', '/login', '/login/'], (request, response) => {
 });
 
 app.post(['/insert', '/insert/'], async (request, response) => {
-  const { login, password, URL } = request.body;
+  const { login, password } = request.body;
+  const URL = request.body.URL || request.body.url;
   const hasRequiredFields =
     Object.prototype.hasOwnProperty.call(request.body, 'login') &&
     Object.prototype.hasOwnProperty.call(request.body, 'password') &&
-    Object.prototype.hasOwnProperty.call(request.body, 'URL');
+    (Object.prototype.hasOwnProperty.call(request.body, 'URL') ||
+      Object.prototype.hasOwnProperty.call(request.body, 'url'));
 
   if (!hasRequiredFields || !URL) {
     response.status(400).type('text/plain').send('Missing login, password, or URL');
@@ -63,6 +66,8 @@ app.post(['/insert', '/insert/'], async (request, response) => {
   const connection = mongoose.createConnection(URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
   });
 
   try {
