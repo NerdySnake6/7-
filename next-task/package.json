@@ -1,0 +1,14 @@
+{
+  "name": "practical-assignment-7",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Practical assignment 7 Express app.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "5.8.11"
+  }
+}
