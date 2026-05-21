@@ -9,9 +9,18 @@ const systemLogin = '1167133';
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use((request, response, next) => {
-  response.set('Access-Control-Allow-Origin', '*');
-  response.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  response.set('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin, X-Requested-With');
+  const origin = request.get('Origin');
+  const requestedHeaders = request.get('Access-Control-Request-Headers');
+
+  response.set('Access-Control-Allow-Origin', origin || '*');
+  response.set('Access-Control-Allow-Credentials', 'true');
+  response.set('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS');
+  response.set(
+    'Access-Control-Allow-Headers',
+    requestedHeaders || 'Content-Type, Accept, Origin, X-Requested-With'
+  );
+  response.set('Access-Control-Max-Age', '86400');
+  response.set('Vary', 'Origin, Access-Control-Request-Headers');
 
   if (request.method === 'OPTIONS') {
     response.sendStatus(204);
