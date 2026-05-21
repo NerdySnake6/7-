@@ -44,15 +44,11 @@ function waitForConnection(connection) {
   });
 }
 
-app.get('/', (request, response) => {
-  response.redirect('/login/');
-});
-
-app.get('/login/', (request, response) => {
+app.get(['/', '/login', '/login/'], (request, response) => {
   response.type('text/plain').send(systemLogin);
 });
 
-app.post('/insert/', async (request, response) => {
+app.post(['/insert', '/insert/'], async (request, response) => {
   const { login, password, URL } = request.body;
   const hasRequiredFields =
     Object.prototype.hasOwnProperty.call(request.body, 'login') &&
