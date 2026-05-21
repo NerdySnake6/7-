@@ -7,6 +7,18 @@ const app = express();
 const systemLogin = '1167133';
 
 app.use(express.urlencoded({ extended: false }));
+app.use((request, response, next) => {
+  response.set('Access-Control-Allow-Origin', '*');
+  response.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  response.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (request.method === 'OPTIONS') {
+    response.sendStatus(204);
+    return;
+  }
+
+  next();
+});
 
 const userSchema = new mongoose.Schema(
   {
