@@ -54,11 +54,11 @@ function waitForConnection(connection) {
   });
 }
 
-app.get(['/', '/login', '/login/'], (request, response) => {
+app.get(/^\/+$|^\/+login\/?$/, (request, response) => {
   response.type('text/plain').send(systemLogin);
 });
 
-app.post(['/insert', '/insert/'], async (request, response) => {
+app.post(/^\/+insert\/?$/, async (request, response) => {
   const { login, password } = request.body;
   const URL = request.body.URL || request.body.url;
   const hasRequiredFields =
