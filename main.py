@@ -1,4 +1,4 @@
-"""Currency rates converter with the Decorator pattern."""
+"""Example of the Decorator pattern for currency rates."""
 
 from __future__ import annotations
 
@@ -6,119 +6,97 @@ import csv
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable
 from urllib.request import urlopen
 
 import yaml
 
 
-CurrencyData = dict[str, Any]
-Fetcher = Callable[[str], bytes]
-
-
-class CurrencyComponent(ABC):
-    """Base interface for currency data components."""
+class Component(ABC):
+    """Common interface for all components."""
 
     @abstractmethod
     def operation(self) -> str:
-        """Return currency data as a string."""
+        """Return data in a selected format."""
 
 
-class CbrCurrencyRates(CurrencyComponent):
-    """Get currency rates from the Central Bank of Russia API."""
+class CurrencyRates(Component):
+    """Component that gets currency rates from the Central Bank API."""
 
-    API_URL = "https://www.cbr-xml-daily.ru/daily_json.js"
+    url = "https://www.cbr-xml-daily.ru/daily_json.js"
 
-    def __init__(self, fetcher: Fetcher | None = None) -> None:
-        """Initialize the component with an optional fetcher."""
-        self._fetcher = fetcher or self._default_fetcher
+    def __init__(self, data: dict | None = None) -> None:
+        """Create component with optional prepared data for tests."""
+        self.data = data
 
     def operation(self) -> str:
         """Return currency rates in JSON format."""
-        return self._fetcher(self.API_URL).decode("utf-8")
+        if self.data is not None:
+            return json.dumps(self.data, ensure_ascii=False)
 
-    @staticmethod
-    def _default_fetcher(url: str) -> bytes:
-        """Load data from the API."""
-        with urlopen(url, timeout=10) as response:
-            return response.read()
+        with urlopen(self.url, timeout=10) as response:
+            return response.read().decode("utf-8")
 
 
-class CurrencyDecorator(CurrencyComponent):
-    """Base decorator for currency components."""
+class Decorator(Component):
+    """Base class for decorators."""
 
-    def __init__(self, component: CurrencyComponent) -> None:
-        """Store wrapped component."""
-        self._component = component
+    def __init__(self, component: Component) -> None:
+        """Save wrapped component."""
+        self.component = component
 
     def operation(self) -> str:
-        """Return data from wrapped component."""
-        return self._component.operation()
+        """Return result from wrapped component."""
+        return self.component.operation()
 
-    def _get_data(self) -> CurrencyData:
-        """Return component data as a dictionary."""
-        return json.loads(self._component.operation())
-
-
-class JsonDecorator(CurrencyDecorator):
-    """Decorator that returns and saves JSON data."""
-
-    def operation(self) -> str:
-        """Return formatted JSON data."""
-        return json.dumps(self._get_data(), ensure_ascii=False, indent=2)
-
-    def save_to_file(self, path: str | Path) -> None:
-        """Save JSON data to a file."""
-        Path(path).write_text(self.operation(), encoding="utf-8")
+    def get_json_data(self) -> dict:
+        """Convert wrapped component result to a dictionary."""
+        return json.loads(self.component.operation())
 
 
-class YamlDecorator(CurrencyDecorator):
-    """Decorator that returns and saves YAML data."""
+class YamlDecorator(Decorator):
+    """Decorator for YAML format."""
 
     def operation(self) -> str:
-        """Return YAML data."""
-        return yaml.safe_dump(self._get_data(), allow_unicode=True, sort_keys=False)
+        """Return data in YAML format."""
+        return yaml.dump(self.get_json_data(), allow_unicode=True, sort_keys=False)
 
-    def save_to_file(self, path: str | Path) -> None:
+    def save_to_file(self, filename: str) -> None:
         """Save YAML data to a file."""
-        Path(path).write_text(self.operation(), encoding="utf-8")
+        Path(filename).write_text(self.operation(), encoding="utf-8")
 
 
-class CsvDecorator(CurrencyDecorator):
-    """Decorator that returns and saves CSV data."""
+class CsvDecorator(Decorator):
+    """Decorator for CSV format."""
 
     def operation(self) -> str:
-        """Return currency rates in CSV format."""
-        data = self._get_data()
-        rows = data.get("Valute", {}).values()
-        output = ["CharCode,Name,Value"]
+        """Return data in CSV format."""
+        data = self.get_json_data()
+        result = ["CharCode,Name,Value"]
 
-        for row in rows:
-            output.append(f"{row['CharCode']},{row['Name']},{row['Value']}")
+        for currency in data["Valute"].values():
+            result.append(
+                f"{currency['CharCode']},{currency['Name']},{currency['Value']}"
+            )
 
-        return "\n".join(output)
+        return "\n".join(result)
 
-    def save_to_file(self, path: str | Path) -> None:
+    def save_to_file(self, filename: str) -> None:
         """Save CSV data to a file."""
-        data = self._get_data()
-        rows = data.get("Valute", {}).values()
+        data = self.get_json_data()
 
-        with Path(path).open("w", encoding="utf-8", newline="") as file:
+        with Path(filename).open("w", encoding="utf-8", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["CharCode", "Name", "Value"])
 
-            for row in rows:
-                writer.writerow([row["CharCode"], row["Name"], row["Value"]])
-
-
-def main() -> None:
-    """Show examples of all decorators."""
-    component = CbrCurrencyRates()
-
-    print(JsonDecorator(component).operation())
-    print(YamlDecorator(component).operation())
-    print(CsvDecorator(component).operation())
+            for currency in data["Valute"].values():
+                writer.writerow(
+                    [currency["CharCode"], currency["Name"], currency["Value"]]
+                )
 
 
 if __name__ == "__main__":
-    main()
+    rates = CurrencyRates()
+
+    print(rates.operation())
+    print(YamlDecorator(rates).operation())
+    print(CsvDecorator(rates).operation())
